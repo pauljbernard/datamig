@@ -8,7 +8,9 @@ This project **extends Claude Code** with specialized skills, subagents, and wor
 
 ## Documentation
 
-This repository includes comprehensive documentation to help you understand, set up, and use the autonomous migration framework:
+This repository includes comprehensive documentation to help you understand, set up, and use the autonomous migration framework.
+
+**📚 [Complete Documentation Index](docs/README.md)** - Find the right guide for your role and needs
 
 ### Getting Started
 
@@ -43,6 +45,14 @@ This repository includes comprehensive documentation to help you understand, set
   - Decision-making intelligence
   - Extension points
 
+- **[Developer Guide](docs/DEVELOPER-GUIDE.md)** - For extending and contributing
+  - Architecture deep dive
+  - Code organization
+  - Adding skills, commands, agents
+  - Python and MCP server development
+  - Testing and debugging strategies
+  - Contributing guidelines
+
 ### Troubleshooting
 
 - **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Solutions to common issues
@@ -60,9 +70,10 @@ This repository includes comprehensive documentation to help you understand, set
 |------|---------------|
 | First time setup | [Setup Guide](docs/SETUP.md) |
 | Run your first migration | [User Guide - Step-by-Step](docs/USER-GUIDE.md#step-by-step-usage) |
+| Execute via GitHub | [GitHub Workflows Guide](docs/GITHUB-WORKFLOWS.md) |
 | Understand how it works | [Agent Capabilities](docs/AGENT-CAPABILITIES.md) |
+| Extend the framework | [Developer Guide](docs/DEVELOPER-GUIDE.md) |
 | Something went wrong | [Troubleshooting Guide](docs/TROUBLESHOOTING.md) |
-| Extend the framework | [Agent Capabilities - Extension Points](docs/AGENT-CAPABILITIES.md#extension-points) |
 
 ## Problem Statement
 
