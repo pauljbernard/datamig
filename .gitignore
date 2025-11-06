@@ -1,0 +1,108 @@
+# Environment variables and secrets
+.env
+.env.local
+*.key
+*.pem
+*.encrypted
+consistency-map.*
+
+# Data directories (contains PII/sensitive data)
+data/staging/
+data/anonymized/
+data/loads/
+data/archive/
+
+# But keep the directory structure
+!data/staging/.gitkeep
+!data/anonymized/.gitkeep
+!data/loads/.gitkeep
+!data/archive/.gitkeep
+
+# Analysis outputs (can be large)
+data/analysis/*.json
+data/analysis/*.dot
+data/manifests/*.json
+
+# Keep example/template files
+!data/analysis/README.md
+!data/manifests/README.md
+
+# Reports (contain migration details)
+data/reports/*.json
+data/reports/*.md
+data/reports/*.html
+
+# Logs
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# Node.js (for MCP servers)
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Database dumps
+*.sql
+*.dump
+*.backup
+
+# Large data files
+*.parquet
+*.csv
+*.tsv
+
+# But keep small example files
+!examples/*.parquet
+!tests/fixtures/*.parquet
+
+# OS generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

@@ -1,0 +1,175 @@
+# Anonymization Rules Configuration
+#
+# Defines how PII fields are detected and anonymized during migration.
+# Fields are matched by pattern (regex) and anonymized according to strategy.
+
+version: "1.0"
+
+# Global settings
+settings:
+  salt_env_var: "ANONYMIZATION_SALT"  # Environment variable for hash salt
+  consistency_required: true  # Ensure same value → same anonymized value
+  preserve_format: true  # Maintain data formats (e.g., phone format)
+
+# Anonymization rules (processed in order)
+rules:
+  # Email addresses
+  - name: "email_addresses"
+    field_pattern: ".*email.*"
+    strategy: "faker"
+    faker_type: "email"
+    preserve_domain: false
+    examples: ["email", "user_email", "contact_email"]
+
+  # Social Security Numbers
+  - name: "ssn"
+    field_pattern: ".*ssn.*|.*social_security.*"
+    strategy: "hash"
+    hash_algorithm: "sha256"
+    salt: "${ANONYMIZATION_SALT}"
+    examples: ["ssn", "social_security_number"]
+
+  # First Names
+  - name: "first_names"
+    field_pattern: ".*first_name.*|.*given_name.*|.*fname.*"
+    strategy: "faker"
+    faker_type: "first_name"
+    consistent_per_id: true
+    examples: ["first_name", "given_name", "fname"]
+
+  # Last Names
+  - name: "last_names"
+    field_pattern: ".*last_name.*|.*family_name.*|.*lname.*|.*surname.*"
+    strategy: "faker"
+    faker_type: "last_name"
+    consistent_per_id: true
+    examples: ["last_name", "family_name", "lname", "surname"]
+
+  # Full Names
+  - name: "full_names"
+    field_pattern: ".*full_name.*|.*display_name.*"
+    strategy: "faker"
+    faker_type: "name"
+    consistent_per_id: true
+    examples: ["full_name", "display_name"]
+
+  # Phone Numbers
+  - name: "phone_numbers"
+    field_pattern: ".*phone.*|.*mobile.*|.*telephone.*|.*tel_.*"
+    strategy: "faker"
+    faker_type: "phone_number"
+    examples: ["phone", "mobile", "telephone", "tel_number"]
+
+  # Street Addresses
+  - name: "street_addresses"
+    field_pattern: ".*street.*|.*address_line.*|.*addr_.*"
+    strategy: "faker"
+    faker_type: "street_address"
+    examples: ["street", "address_line1", "addr_street"]
+
+  # Cities
+  - name: "cities"
+    field_pattern: ".*city.*"
+    strategy: "faker"
+    faker_type: "city"
+    examples: ["city", "city_name"]
+
+  # States (preserve for data utility)
+  - name: "states"
+    field_pattern: ".*state.*"
+    strategy: "preserve"
+    reason: "State is not PII and needed for testing"
+    examples: ["state", "state_code"]
+
+  # ZIP/Postal Codes
+  - name: "zip_codes"
+    field_pattern: ".*zip.*|.*postal.*"
+    strategy: "faker"
+    faker_type: "zipcode"
+    examples: ["zip", "zip_code", "postal_code"]
+
+  # Dates of Birth
+  - name: "birth_dates"
+    field_pattern: ".*birth.*|.*dob.*"
+    strategy: "faker"
+    faker_type: "date_of_birth"
+    faker_args:
+      minimum_age: 5
+      maximum_age: 85
+    examples: ["birth_date", "dob", "date_of_birth"]
+
+  # Student/Staff/District IDs (PRESERVE for FK integrity)
+  - name: "entity_ids"
+    field_pattern: ".*_id$|.*_key$"
+    strategy: "preserve"
+    reason: "Foreign keys must be preserved for referential integrity"
+    examples: ["student_id", "teacher_id", "school_id", "district_id"]
+
+  # Usernames (make anonymous but consistent)
+  - name: "usernames"
+    field_pattern: ".*username.*|.*user_name.*|.*login.*"
+    strategy: "faker"
+    faker_type: "user_name"
+    consistent_per_id: true
+    examples: ["username", "user_name", "login"]
+
+  # Passwords (nullify - shouldn't exist in PROD data but just in case)
+  - name: "passwords"
+    field_pattern: ".*password.*|.*passwd.*|.*pwd.*"
+    strategy: "nullify"
+    reason: "Passwords should never be migrated"
+    examples: ["password", "passwd", "pwd_hash"]
+
+  # IP Addresses
+  - name: "ip_addresses"
+    field_pattern: ".*ip_address.*|.*ip_addr.*"
+    strategy: "faker"
+    faker_type: "ipv4"
+    examples: ["ip_address", "ip_addr", "last_login_ip"]
+
+  # URLs/Websites
+  - name: "urls"
+    field_pattern: ".*url.*|.*website.*"
+    strategy: "faker"
+    faker_type: "url"
+    examples: ["url", "website", "homepage_url"]
+
+# Strategies available:
+#
+# - faker: Generate realistic fake data using Faker library
+#   - Options: faker_type (name, email, phone_number, address, city, zipcode, etc.)
+#   - consistent_per_id: true/false (same input → same output)
+#
+# - hash: One-way hashing (irreversible)
+#   - Options: hash_algorithm (sha256, sha512), salt (from env var)
+#
+# - tokenize: Replace with tokens (reversible if key is stored)
+#   - Generates: TOKEN_00000001, TOKEN_00000002, etc.
+#
+# - nullify: Replace with NULL
+#   - Use for highly sensitive data that shouldn't be in CERT
+#
+# - preserve: Keep original value
+#   - Use for FK fields, non-PII reference data
+
+# PII Detection
+#
+# Fields are matched using regex patterns (case-insensitive).
+# First matching rule wins (rules processed top-to-bottom).
+# If no rule matches, field is preserved by default.
+
+# Consistency
+#
+# When consistent_per_id is true, the consistency map ensures:
+# - Same PII value in table A → same anonymized value in table A
+# - Same PII value in table B → same anonymized value in table B
+# - Same PII value across tables → same anonymized value everywhere
+#
+# This preserves FK relationships and data integrity.
+
+# Testing
+#
+# To test rules without running full migration:
+# 1. Create sample data file
+# 2. Run: python scripts/test-anonymization.py --rules config/anonymization-rules.yaml --input sample.parquet
+# 3. Review output for proper anonymization

@@ -1,0 +1,206 @@
+# Validation Rules Configuration
+#
+# Defines business rules and domain-specific validations
+# to be checked after anonymization and before CERT loading.
+
+version: "1.0"
+
+# Global validation settings
+settings:
+  fail_on_warnings: false  # Continue even if warnings found
+  max_warnings_allowed: 10  # Fail if more than N warnings
+  record_sample_size: 1000  # Max records to sample for validation
+
+# Business Rules
+business_rules:
+  # Student Age Validation
+  - name: "student_age_range"
+    description: "Students must be between 5 and 22 years old"
+    table: "students"
+    store: "ids"
+    condition: "age >= 5 AND age <= 22"
+    severity: "WARNING"
+    explanation: "Ages outside this range may indicate data quality issues or adult learners"
+
+  # Enrollment Dates
+  - name: "enrollment_date_logical"
+    description: "Enrollment date must be before graduation date"
+    table: "enrollments"
+    store: "ids"
+    condition: "enrollment_date < graduation_date OR graduation_date IS NULL"
+    severity: "ERROR"
+    explanation: "Illogical dates indicate data corruption"
+
+  # Staff Employment
+  - name: "staff_employment_dates"
+    description: "Hire date must be before termination date"
+    table: "staff"
+    store: "ids"
+    condition: "hire_date < termination_date OR termination_date IS NULL"
+    severity: "ERROR"
+
+  # Grade Level Validity
+  - name: "grade_level_range"
+    description: "Grade level must be K-12 (represented as 0-12)"
+    table: "students"
+    store: "ids"
+    condition: "grade_level >= 0 AND grade_level <= 12"
+    severity: "WARNING"
+
+  # School District Consistency
+  - name: "school_district_match"
+    description: "All schools in extract must belong to the district"
+    table: "schools"
+    store: "ids"
+    validation_type: "custom"
+    function: "validate_school_district_consistency"
+    severity: "ERROR"
+
+  # Rostering Integrity
+  - name: "student_school_in_district"
+    description: "Student's school must be in student's district"
+    table: "students"
+    store: "ids"
+    validation_type: "cross_table"
+    join_table: "schools"
+    join_condition: "students.school_id = schools.id"
+    condition: "students.district_id = schools.district_id"
+    severity: "ERROR"
+
+  # Teacher Assignment
+  - name: "teacher_has_classes"
+    description: "Active teachers should be assigned to at least one class"
+    table: "teachers"
+    store: "ids"
+    validation_type: "cross_table"
+    condition: "EXISTS (SELECT 1 FROM class_assignments WHERE teacher_id = teachers.id)"
+    severity: "WARNING"
+
+  # Email Format
+  - name: "email_format_valid"
+    description: "Anonymized emails should be valid format"
+    table: "students"
+    store: "ids"
+    condition: "email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$' OR email IS NULL"
+    severity: "WARNING"
+
+  # Phone Format (if US)
+  - name: "phone_format_valid"
+    description: "Phone numbers should match expected format"
+    table: "students"
+    store: "ids"
+    condition: "phone ~ '^[0-9]{3}-[0-9]{3}-[0-9]{4}$' OR phone IS NULL"
+    severity: "WARNING"
+
+  # Attendance Records
+  - name: "attendance_in_school_year"
+    description: "Attendance dates should be within school year"
+    table: "attendance"
+    store: "ids"
+    condition: "attendance_date >= '2024-08-01' AND attendance_date <= '2025-06-30'"
+    severity: "WARNING"
+
+# Data Completeness Rules
+completeness_rules:
+  # Required Fields
+  - name: "student_required_fields"
+    description: "Students must have required fields populated"
+    table: "students"
+    store: "ids"
+    required_fields: ["id", "district_id", "first_name", "last_name", "grade_level"]
+    severity: "ERROR"
+
+  - name: "school_required_fields"
+    description: "Schools must have required fields populated"
+    table: "schools"
+    store: "ids"
+    required_fields: ["id", "district_id", "name", "state"]
+    severity: "ERROR"
+
+  # Minimum Record Counts
+  - name: "minimum_students_per_school"
+    description: "Each school should have at least 10 students"
+    table: "schools"
+    store: "ids"
+    validation_type: "aggregate"
+    condition: "COUNT(students.id) >= 10 FOR EACH school"
+    severity: "WARNING"
+
+# Cross-Store Consistency Rules
+cross_store_rules:
+  # District ID Consistency
+  - name: "district_id_across_stores"
+    description: "Same district_id should exist across all stores"
+    stores: ["ids", "hcp1", "hcp2", "adb"]
+    validation_type: "cross_store"
+    function: "validate_district_id_consistency"
+    severity: "WARNING"
+
+  # Student Count Consistency
+  - name: "student_count_consistency"
+    description: "Student counts should be similar across stores"
+    stores: ["ids", "hcp1"]
+    tolerance: 0.05  # 5% variance allowed
+    validation_type: "cross_store"
+    function: "validate_student_counts"
+    severity: "WARNING"
+
+# Data Quality Rules
+data_quality_rules:
+  # No Future Dates
+  - name: "no_future_created_dates"
+    description: "created_at dates should not be in the future"
+    applies_to_all_tables: true
+    condition: "created_at <= CURRENT_DATE"
+    severity: "WARNING"
+
+  # No Ancient Dates
+  - name: "reasonable_created_dates"
+    description: "created_at dates should be after 2000"
+    applies_to_all_tables: true
+    condition: "created_at >= '2000-01-01'"
+    severity: "WARNING"
+
+  # No Negative IDs
+  - name: "positive_ids"
+    description: "All ID fields should be positive integers"
+    applies_to_all_id_fields: true
+    condition: "id > 0"
+    severity: "ERROR"
+
+  # Reasonable String Lengths
+  - name: "name_length_reasonable"
+    description: "Name fields should be between 1 and 100 characters"
+    field_pattern: ".*name.*"
+    condition: "LENGTH(field) >= 1 AND LENGTH(field) <= 100"
+    severity: "WARNING"
+
+# Custom Validation Functions
+#
+# These are implemented in Python (scripts/validators/custom_validations.py)
+# and called during validation:
+#
+# - validate_school_district_consistency(data)
+# - validate_district_id_consistency(data)
+# - validate_student_counts(data)
+# - validate_rostering_integrity(data)
+
+# Severity Levels:
+#
+# - ERROR: Critical issue, migration should NOT proceed to loading
+# - WARNING: Notable issue, but not blocking (log and continue)
+# - INFO: Informational only, for awareness
+
+# Validation Execution:
+#
+# 1. Schema validation (data types, nullability) - always runs
+# 2. Referential integrity (FK validation) - always runs
+# 3. Business rules (from this config) - runs for matching tables
+# 4. Completeness rules - runs for all tables
+# 5. Cross-store rules - runs across multiple stores
+# 6. Data quality rules - runs for all applicable fields
+
+# Testing:
+#
+# To test validation rules:
+# python scripts/test-validation.py --rules config/validation-rules.yaml --data data/anonymized/district-001
