@@ -1,0 +1,125 @@
+{
+  "mcpServers": {
+    "postgres-ids-prod": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://readonly_user:${PROD_IDS_PASSWORD}@prod-ids-rds.amazonaws.com:5432/ids_db"
+      ],
+      "env": {
+        "PGPASSWORD": "${PROD_IDS_PASSWORD}"
+      },
+      "disabled": true
+    },
+    "postgres-hcp1-prod": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://readonly_user:${PROD_HCP1_PASSWORD}@prod-hcp1-rds.amazonaws.com:5432/hcp1_db"
+      ],
+      "env": {
+        "PGPASSWORD": "${PROD_HCP1_PASSWORD}"
+      },
+      "disabled": true
+    },
+    "postgres-hcp2-prod": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://readonly_user:${PROD_HCP2_PASSWORD}@prod-hcp2-rds.amazonaws.com:5432/hcp2_db"
+      ],
+      "env": {
+        "PGPASSWORD": "${PROD_HCP2_PASSWORD}"
+      },
+      "disabled": true
+    },
+    "postgres-adb-prod": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://readonly_user:${PROD_ADB_PASSWORD}@prod-adb-rds.amazonaws.com:5432/adb_db"
+      ],
+      "env": {
+        "PGPASSWORD": "${PROD_ADB_PASSWORD}"
+      },
+      "disabled": true
+    },
+    "neo4j-sp-prod": {
+      "command": "node",
+      "args": ["./mcp-servers/neo4j/index.js"],
+      "env": {
+        "NEO4J_URI": "bolt://prod-graph-db.amazonaws.com:7687",
+        "NEO4J_USER": "readonly",
+        "NEO4J_PASSWORD": "${NEO4J_PROD_PASSWORD}"
+      },
+      "disabled": true
+    },
+    "postgres-ids-cert": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://admin_user:${CERT_IDS_PASSWORD}@cert-ids-rds.amazonaws.com:5432/ids_db"
+      ],
+      "env": {
+        "PGPASSWORD": "${CERT_IDS_PASSWORD}"
+      },
+      "disabled": true
+    },
+    "postgres-hcp1-cert": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://admin_user:${CERT_HCP1_PASSWORD}@cert-hcp1-rds.amazonaws.com:5432/hcp1_db"
+      ],
+      "env": {
+        "PGPASSWORD": "${CERT_HCP1_PASSWORD}"
+      },
+      "disabled": true
+    },
+    "postgres-hcp2-cert": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://admin_user:${CERT_HCP2_PASSWORD}@cert-hcp2-rds.amazonaws.com:5432/hcp2_db"
+      ],
+      "env": {
+        "PGPASSWORD": "${CERT_HCP2_PASSWORD}"
+      },
+      "disabled": true
+    },
+    "postgres-adb-cert": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://admin_user:${CERT_ADB_PASSWORD}@cert-adb-rds.amazonaws.com:5432/adb_db"
+      ],
+      "env": {
+        "PGPASSWORD": "${CERT_ADB_PASSWORD}"
+      },
+      "disabled": true
+    },
+    "neo4j-sp-cert": {
+      "command": "node",
+      "args": ["./mcp-servers/neo4j/index.js"],
+      "env": {
+        "NEO4J_URI": "bolt://cert-graph-db.amazonaws.com:7687",
+        "NEO4J_USER": "admin",
+        "NEO4J_PASSWORD": "${NEO4J_CERT_PASSWORD}"
+      },
+      "disabled": true
+    },
+    "etl-server": {
+      "command": "node",
+      "args": ["./mcp-servers/etl/index.js"],
+      "disabled": true
+    }
+  }
+}
