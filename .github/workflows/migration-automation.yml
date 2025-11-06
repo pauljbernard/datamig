@@ -1,0 +1,255 @@
+name: Autonomous Migration Execution
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  issues: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  trigger-migration:
+    name: Trigger Autonomous Migration
+    # Only run on migration request issues
+    if: contains(github.event.issue.labels.*.name, 'migration')
+    runs-on: ubuntu-latest
+    timeout-minutes: 600  # 10 hours max
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Node dependencies
+        run: |
+          cd mcp-servers/neo4j && npm install
+          cd ../etl && npm install
+
+      - name: Parse issue body
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body;
+
+            // Parse district_id from issue body
+            const districtMatch = body.match(/###\s+District ID\s+(.+)/);
+            const district_id = districtMatch ? districtMatch[1].trim() : null;
+
+            // Parse migration_type
+            const typeMatch = body.match(/###\s+Migration Type\s+(.+)/);
+            const migration_type = typeMatch ? typeMatch[1].trim() : 'Full Migration';
+
+            // Parse priority
+            const priorityMatch = body.match(/###\s+Priority\s+(.+)/);
+            const priority = priorityMatch ? priorityMatch[1].trim() : 'Medium';
+
+            // Parse options
+            const skip_extraction = body.includes('[X] Skip extraction');
+            const skip_load = body.includes('[X] Skip loading');
+            const enable_backup = body.includes('[X] Enable CERT backup');
+            const send_slack = body.includes('[X] Send Slack notification');
+
+            core.setOutput('district_id', district_id);
+            core.setOutput('migration_type', migration_type);
+            core.setOutput('priority', priority);
+            core.setOutput('skip_extraction', skip_extraction);
+            core.setOutput('skip_load', skip_load);
+            core.setOutput('enable_backup', enable_backup);
+            core.setOutput('send_slack', send_slack);
+
+            return {
+              district_id,
+              migration_type,
+              priority,
+              options: { skip_extraction, skip_load, enable_backup, send_slack }
+            };
+
+      - name: Post migration start comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `🚀 **Migration Started**\n\nDistrict: \`${{ steps.parse.outputs.district_id }}\`\nType: ${{ steps.parse.outputs.migration_type }}\nPriority: ${{ steps.parse.outputs.priority }}\n\nEstimated duration: 4-8 hours\n\nI'll post updates every 30 minutes. You can monitor progress here.`
+            });
+
+      - name: Configure environment
+        env:
+          PROD_IDS_PASSWORD: ${{ secrets.PROD_IDS_PASSWORD }}
+          PROD_HCP1_PASSWORD: ${{ secrets.PROD_HCP1_PASSWORD }}
+          PROD_HCP2_PASSWORD: ${{ secrets.PROD_HCP2_PASSWORD }}
+          PROD_ADB_PASSWORD: ${{ secrets.PROD_ADB_PASSWORD }}
+          NEO4J_PROD_PASSWORD: ${{ secrets.NEO4J_PROD_PASSWORD }}
+          CERT_IDS_PASSWORD: ${{ secrets.CERT_IDS_PASSWORD }}
+          CERT_HCP1_PASSWORD: ${{ secrets.CERT_HCP1_PASSWORD }}
+          CERT_HCP2_PASSWORD: ${{ secrets.CERT_HCP2_PASSWORD }}
+          CERT_ADB_PASSWORD: ${{ secrets.CERT_ADB_PASSWORD }}
+          NEO4J_CERT_PASSWORD: ${{ secrets.NEO4J_CERT_PASSWORD }}
+          ANONYMIZATION_SALT: ${{ secrets.ANONYMIZATION_SALT }}
+        run: |
+          echo "Environment configured"
+          # Create .env file from secrets
+          cat > .env << EOF
+          PROD_IDS_PASSWORD=${PROD_IDS_PASSWORD}
+          PROD_HCP1_PASSWORD=${PROD_HCP1_PASSWORD}
+          PROD_HCP2_PASSWORD=${PROD_HCP2_PASSWORD}
+          PROD_ADB_PASSWORD=${PROD_ADB_PASSWORD}
+          NEO4J_PROD_PASSWORD=${NEO4J_PROD_PASSWORD}
+          CERT_IDS_PASSWORD=${CERT_IDS_PASSWORD}
+          CERT_HCP1_PASSWORD=${CERT_HCP1_PASSWORD}
+          CERT_HCP2_PASSWORD=${CERT_HCP2_PASSWORD}
+          CERT_ADB_PASSWORD=${CERT_ADB_PASSWORD}
+          NEO4J_CERT_PASSWORD=${NEO4J_CERT_PASSWORD}
+          ANONYMIZATION_SALT=${ANONYMIZATION_SALT}
+          EOF
+
+      - name: Execute migration via integration script
+        id: migration
+        run: |
+          python scripts/github/trigger-migration.py \
+            --district-id "${{ steps.parse.outputs.district_id }}" \
+            --migration-type "${{ steps.parse.outputs.migration_type }}" \
+            --issue-number "${{ github.event.issue.number }}" \
+            --repository "${{ github.repository }}" \
+            ${{ steps.parse.outputs.skip_extraction && '--skip-extraction' || '' }} \
+            ${{ steps.parse.outputs.skip_load && '--skip-load' || '' }} \
+            > migration-output.txt 2>&1
+        continue-on-error: true
+
+      - name: Parse migration results
+        id: results
+        run: |
+          # Check if migration succeeded
+          if [ -f "data/reports/mig-*.md" ]; then
+            run_id=$(ls data/reports/mig-*.md | head -1 | xargs basename -s .md)
+            echo "run_id=$run_id" >> $GITHUB_OUTPUT
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload migration artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-results-${{ steps.parse.outputs.district_id }}
+          path: |
+            data/reports/
+            data/anonymized/${{ steps.parse.outputs.district_id }}/anonymization-report.json
+            data/anonymized/${{ steps.parse.outputs.district_id }}/validation-report.json
+            logs/
+            migration-output.txt
+          retention-days: 30
+
+      - name: Create PR with migration report
+        if: steps.results.outputs.success == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const run_id = '${{ steps.results.outputs.run_id }}';
+            const district_id = '${{ steps.parse.outputs.district_id }}';
+
+            // Read migration report
+            const reportPath = `data/reports/${run_id}.md`;
+            const reportContent = fs.readFileSync(reportPath, 'utf8');
+
+            // Create PR
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Migration Report: ${district_id} (${run_id})`,
+              head: `migration-${run_id}`,
+              base: 'master',
+              body: `## Migration Report\n\n${reportContent}\n\n---\n\nCloses #${context.issue.number}`
+            });
+
+            core.setOutput('pr_number', pr.number);
+            core.setOutput('pr_url', pr.html_url);
+
+      - name: Post success comment
+        if: steps.results.outputs.success == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run_id = '${{ steps.results.outputs.run_id }}';
+            const pr_url = '${{ steps.results.outputs.pr_url }}';
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `✅ **Migration Completed Successfully**\n\nRun ID: \`${run_id}\`\n\nA PR with the full migration report has been created: ${pr_url}\n\n**Next Steps:**\n1. Review the migration report in the PR\n2. Run QA validation\n3. Merge the PR to close this issue\n\n**To validate:** Run \`/validate-migration ${run_id}\``
+            });
+
+            // Close issue
+            github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed',
+              labels: ['migration', 'completed']
+            });
+
+      - name: Post failure comment
+        if: steps.results.outputs.success == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('migration-output.txt', 'utf8');
+            const errorSnippet = output.split('\n').slice(-50).join('\n');
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `⛔ **Migration Failed**\n\nThe migration encountered an error and could not complete.\n\n### Error Output (last 50 lines):\n\`\`\`\n${errorSnippet}\n\`\`\`\n\n### Next Steps:\n1. Review the error output above\n2. Check the uploaded artifacts for full logs\n3. Fix the root cause\n4. Re-open this issue to retry\n\n### Troubleshooting:\nSee [TROUBLESHOOTING.md](https://github.com/${{ github.repository }}/blob/master/docs/TROUBLESHOOTING.md)`
+            });
+
+            // Label as failed
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['failed']
+            });
+
+      - name: Send Slack notification
+        if: steps.parse.outputs.send_slack == 'true' && always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "Migration ${{ steps.results.outputs.success == 'true' && 'Completed' || 'Failed' }}: ${{ steps.parse.outputs.district_id }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ steps.results.outputs.success == 'true' && '✅' || '⛔' }} Migration *${{ steps.results.outputs.success == 'true' && 'Completed' || 'Failed' }}*\n\nDistrict: `${{ steps.parse.outputs.district_id }}`\nRun ID: `${{ steps.results.outputs.run_id }}`\nIssue: <https://github.com/${{ github.repository }}/issues/${{ github.event.issue.number }}|#${{ github.event.issue.number }}>"
+                  }
+                }
+              ]
+            }

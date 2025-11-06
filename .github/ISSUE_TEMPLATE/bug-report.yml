@@ -1,0 +1,104 @@
+name: Bug Report
+description: Report a bug in the migration framework
+title: "[BUG] "
+labels: ["bug"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+
+        Report issues with the migration framework itself (not data quality issues).
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component has the bug?
+      options:
+        - Extraction (extract_with_relationships.py)
+        - Anonymization (anonymize.py)
+        - Validation (validate_integrity.py)
+        - Loading (load_with_constraints.py)
+        - Reporting (generate-report.py)
+        - MCP Servers (Neo4j or ETL)
+        - Skills/Commands (Claude Code integration)
+        - GitHub Actions/Workflows
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Clear description of the bug
+      placeholder: Describe what went wrong...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this bug?
+      placeholder: |
+        1. Run `/migrate district-001`
+        2. Wait for extraction phase
+        3. Observe error message...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+      placeholder: Migration should complete successfully...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: Migration failed with error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs
+      description: Relevant error messages or logs
+      placeholder: |
+        Paste error logs here...
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Your environment details
+      value: |
+        - OS:
+        - Python version:
+        - Node.js version:
+        - Claude Code version:
+        - Branch/commit:
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information
+      placeholder: Screenshots, configuration files, etc.
+    validations:
+      required: false

@@ -1,0 +1,124 @@
+name: Migration Request
+description: Request an autonomous district migration from PROD to CERT
+title: "[MIGRATION] Migrate district: "
+labels: ["migration", "automated"]
+assignees:
+  - datamig-bot
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## District Migration Request
+
+        This will trigger an **autonomous 4-8 hour migration** from PROD to CERT.
+
+        **What happens:**
+        1. GitHub Actions will trigger Claude Code
+        2. Claude Code will execute the migration autonomously
+        3. Results will be posted back to this issue
+        4. A PR with the migration report will be created
+
+        **Prerequisites:**
+        - District ID must be valid (from `/select-districts`)
+        - PROD and CERT credentials must be configured
+        - MCP servers must be enabled
+
+  - type: input
+    id: district_id
+    attributes:
+      label: District ID
+      description: The district to migrate (e.g., district-001)
+      placeholder: district-001
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: Migration priority level
+      options:
+        - Low (Can wait for next batch)
+        - Medium (Normal timeline)
+        - High (Needed for upcoming test)
+        - Critical (Blocking issue)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: migration_type
+    attributes:
+      label: Migration Type
+      description: Type of migration to perform
+      options:
+        - Full Migration (Extract, Anonymize, Validate, Load)
+        - Dry Run (Extract, Anonymize, Validate only)
+        - Re-migration (Rollback existing, then migrate)
+        - Validation Only (Validate existing CERT data)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: options
+    attributes:
+      label: Migration Options
+      description: Select any additional options
+      options:
+        - label: Skip extraction (use existing extracted data)
+        - label: Skip loading (validate only)
+        - label: Enable CERT backup before loading
+        - label: Send Slack notification on completion
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Reason for Migration
+      description: Why is this migration needed? (for audit trail)
+      placeholder: |
+        Example: Needed for BTS 2026 testing
+        Example: QA team requested fresh data
+        Example: Previous migration had data quality issues
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_results
+    attributes:
+      label: Expected Results
+      description: What should be validated after migration?
+      placeholder: |
+        - Student count should be ~5,000
+        - All schools should have rosters
+        - No orphaned enrollments
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: acknowledgments
+    attributes:
+      label: Acknowledgments
+      description: Please confirm you understand
+      options:
+        - label: I understand this will modify CERT database
+          required: true
+        - label: I have verified the district ID is correct
+          required: true
+        - label: I will monitor this issue for results
+          required: true
+        - label: I can rollback if validation fails
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        **After submission:**
+        - This issue will be automatically labeled and assigned
+        - GitHub Actions will trigger the migration
+        - Claude Code will execute autonomously (4-8 hours)
+        - Results will be posted as comments on this issue
+        - A PR will be created with the migration report
+
+        **To cancel:** Close this issue before the workflow starts

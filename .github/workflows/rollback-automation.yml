@@ -1,0 +1,157 @@
+name: Autonomous Rollback Execution
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  trigger-rollback:
+    name: Trigger Autonomous Rollback
+    # Only run on rollback request issues
+    if: contains(github.event.issue.labels.*.name, 'rollback')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # 2 hours max
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Parse issue body
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body;
+
+            // Parse run_id
+            const runIdMatch = body.match(/###\s+Migration Run ID\s+(.+)/);
+            const run_id = runIdMatch ? runIdMatch[1].trim() : null;
+
+            // Parse district_id
+            const districtMatch = body.match(/###\s+District ID\s+(.+)/);
+            const district_id = districtMatch ? districtMatch[1].trim() : null;
+
+            // Parse reason
+            const reasonMatch = body.match(/###\s+Rollback Reason\s+(.+)/);
+            const reason = reasonMatch ? reasonMatch[1].trim() : 'Not specified';
+
+            core.setOutput('run_id', run_id);
+            core.setOutput('district_id', district_id);
+            core.setOutput('reason', reason);
+
+            return { run_id, district_id, reason };
+
+      - name: Post rollback start comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `⚠️ **Rollback Started**\n\nRun ID: \`${{ steps.parse.outputs.run_id }}\`\nDistrict: \`${{ steps.parse.outputs.district_id }}\`\nReason: ${{ steps.parse.outputs.reason }}\n\n**⚠️ WARNING:** This will DELETE all data for this district from CERT.\n\nEstimated duration: ~1 hour\n\nProcessing in REVERSE dependency order...`
+            });
+
+      - name: Configure environment
+        env:
+          CERT_IDS_PASSWORD: ${{ secrets.CERT_IDS_PASSWORD }}
+          CERT_HCP1_PASSWORD: ${{ secrets.CERT_HCP1_PASSWORD }}
+          CERT_HCP2_PASSWORD: ${{ secrets.CERT_HCP2_PASSWORD }}
+          CERT_ADB_PASSWORD: ${{ secrets.CERT_ADB_PASSWORD }}
+          NEO4J_CERT_PASSWORD: ${{ secrets.NEO4J_CERT_PASSWORD }}
+        run: |
+          cat > .env << EOF
+          CERT_IDS_PASSWORD=${CERT_IDS_PASSWORD}
+          CERT_HCP1_PASSWORD=${CERT_HCP1_PASSWORD}
+          CERT_HCP2_PASSWORD=${CERT_HCP2_PASSWORD}
+          CERT_ADB_PASSWORD=${CERT_ADB_PASSWORD}
+          NEO4J_CERT_PASSWORD=${NEO4J_CERT_PASSWORD}
+          EOF
+
+      - name: Execute rollback via integration script
+        id: rollback
+        run: |
+          python scripts/github/trigger-rollback.py \
+            --run-id "${{ steps.parse.outputs.run_id }}" \
+            --district-id "${{ steps.parse.outputs.district_id }}" \
+            --reason "${{ steps.parse.outputs.reason }}" \
+            --issue-number "${{ github.event.issue.number }}" \
+            > rollback-output.txt 2>&1
+        continue-on-error: true
+
+      - name: Check rollback success
+        id: check
+        run: |
+          if grep -q "Rollback completed successfully" rollback-output.txt; then
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload rollback logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rollback-logs-${{ steps.parse.outputs.run_id }}
+          path: |
+            rollback-output.txt
+            logs/rollback-*.log
+          retention-days: 90  # Keep rollback logs longer
+
+      - name: Post success comment
+        if: steps.check.outputs.success == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `✅ **Rollback Completed Successfully**\n\nAll data for district \`${{ steps.parse.outputs.district_id }}\` has been removed from CERT.\n\n**Artifacts Preserved:**\n- Migration logs\n- Validation reports\n- Extraction manifests\n\nThese are available in the original migration artifacts for troubleshooting.\n\n**Next Steps:**\n1. Fix the root cause\n2. Create a new migration request\n3. Re-migrate with fixes applied`
+            });
+
+            // Close issue
+            github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed',
+              labels: ['rollback', 'completed']
+            });
+
+      - name: Post failure comment
+        if: steps.check.outputs.success == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('rollback-output.txt', 'utf8');
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `⛔ **Rollback Failed**\n\nThe rollback encountered an error.\n\n### Error Output:\n\`\`\`\n${output}\n\`\`\`\n\n### ⚠️ MANUAL INTERVENTION REQUIRED\n\nYou may need to:\n1. Contact your DBA for manual cleanup\n2. Check CERT database connectivity\n3. Review the error output above\n\nSee [TROUBLESHOOTING.md - Rollback Issues](https://github.com/${{ github.repository }}/blob/master/docs/TROUBLESHOOTING.md#recovering-from-partial-rollback)`
+            });
+
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['failed', 'needs-manual-intervention']
+            });

@@ -1,0 +1,100 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[FEATURE] "
+labels: ["enhancement"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+
+        Suggest new features or enhancements to the migration framework.
+
+  - type: dropdown
+    id: feature_type
+    attributes:
+      label: Feature Type
+      description: What type of feature is this?
+      options:
+        - New validation rule
+        - New anonymization strategy
+        - Performance improvement
+        - New reporting format
+        - Enhanced error handling
+        - Better observability
+        - Integration with other tools
+        - Documentation improvement
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve?
+      placeholder: |
+        Currently, users cannot...
+        It's difficult to...
+        We need a way to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How should this feature work?
+      placeholder: |
+        Add a new command /feature-name that...
+        Enhance the validation to check...
+        Provide a new report format that...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What other solutions did you consider?
+      placeholder: |
+        We considered X but...
+        Another approach would be Y...
+    validations:
+      required: false
+
+  - type: textarea
+    id: benefits
+    attributes:
+      label: Benefits
+      description: Who benefits and how?
+      placeholder: |
+        - Users can...
+        - Reduces time by...
+        - Improves reliability by...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature?
+      options:
+        - Low (Nice to have)
+        - Medium (Useful enhancement)
+        - High (Important for operations)
+        - Critical (Blocking current work)
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information
+      placeholder: |
+        Examples, mockups, references to similar features...
+    validations:
+      required: false

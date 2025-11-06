@@ -1,0 +1,108 @@
+name: Rollback Request
+description: Request emergency rollback of a migration
+title: "[ROLLBACK] Rollback migration: "
+labels: ["rollback", "urgent", "automated"]
+assignees:
+  - datamig-bot
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ⚠️ Emergency Rollback Request
+
+        This will **DELETE all migrated data** from CERT for the specified district.
+
+        **⚠️ WARNING: This is DESTRUCTIVE and IRREVERSIBLE!**
+
+        **What happens:**
+        1. GitHub Actions will trigger Claude Code
+        2. Claude Code will execute rollback in reverse dependency order
+        3. All district data will be removed from CERT
+        4. Results will be posted back to this issue
+
+  - type: input
+    id: run_id
+    attributes:
+      label: Migration Run ID
+      description: The run ID to rollback (e.g., mig-20260115-001)
+      placeholder: mig-20260115-001
+    validations:
+      required: true
+
+  - type: input
+    id: district_id
+    attributes:
+      label: District ID
+      description: The district to rollback (for verification)
+      placeholder: district-001
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reason_category
+    attributes:
+      label: Rollback Reason
+      description: Why is rollback needed?
+      options:
+        - Validation Failed (Errors detected)
+        - Data Quality Issues (Bad data loaded)
+        - Wrong District Migrated (Human error)
+        - Testing Purposes (Need to re-run)
+        - Other (Explain below)
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason_details
+    attributes:
+      label: Detailed Reason
+      description: Explain why rollback is needed
+      placeholder: |
+        Example: Validation failed with 23 FK violations
+        Example: Discovered incorrect data after QA review
+        Example: Migrated wrong district by mistake
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_errors
+    attributes:
+      label: Validation Errors (if applicable)
+      description: Copy validation errors from migration report
+      placeholder: |
+        Paste validation errors here...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: acknowledgments
+    attributes:
+      label: ⚠️ Critical Acknowledgments
+      description: You MUST confirm these before proceeding
+      options:
+        - label: "I understand this will DELETE all data for this district from CERT"
+          required: true
+        - label: "I have verified this is the correct run ID"
+          required: true
+        - label: "I have approval to perform this rollback (if required by policy)"
+          required: true
+        - label: "I understand this operation is IRREVERSIBLE"
+          required: true
+        - label: "I will re-migrate after fixing the root cause"
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        **After submission:**
+        - This issue will be labeled as URGENT
+        - GitHub Actions will trigger the rollback immediately
+        - Claude Code will execute rollback autonomously (~1 hour)
+        - Deletion will happen in REVERSE dependency order
+        - Results will be posted as comments on this issue
+        - Artifacts will be preserved for troubleshooting
+
+        **⚠️ To cancel:** Close this issue immediately

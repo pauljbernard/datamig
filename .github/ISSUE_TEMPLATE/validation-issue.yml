@@ -1,0 +1,119 @@
+name: Validation Issue
+description: Report validation failures or data quality issues
+title: "[VALIDATION] Validation failed for: "
+labels: ["validation", "data-quality"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Validation Issue Report
+
+        Report validation failures, data quality issues, or business rule violations.
+
+  - type: input
+    id: run_id
+    attributes:
+      label: Migration Run ID
+      description: The run ID where validation failed
+      placeholder: mig-20260115-001
+    validations:
+      required: true
+
+  - type: input
+    id: district_id
+    attributes:
+      label: District ID
+      description: The district that failed validation
+      placeholder: district-001
+    validations:
+      required: true
+
+  - type: dropdown
+    id: validation_phase
+    attributes:
+      label: Validation Phase
+      description: When did validation fail?
+      options:
+        - Pre-load Validation (before loading to CERT)
+        - Post-load Validation (after loading to CERT)
+        - Manual QA Testing (after migration complete)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this issue?
+      options:
+        - Critical (Migration cannot proceed)
+        - High (Significant data quality issue)
+        - Medium (Minor data quality issue)
+        - Low (Cosmetic or documentation issue)
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_errors
+    attributes:
+      label: Validation Errors
+      description: Copy the validation errors from the report
+      placeholder: |
+        Paste validation errors here...
+
+        Example:
+        - referential_integrity: 23 orphaned FK values in enrollments.student_id
+        - business_rule: student_age_range failed for 12 students
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact Assessment
+      description: What is the impact of this validation failure?
+      placeholder: |
+        - How many records are affected?
+        - Can testing proceed with this data?
+        - Is rollback required?
+    validations:
+      required: true
+
+  - type: textarea
+    id: root_cause
+    attributes:
+      label: Suspected Root Cause
+      description: What might be causing this issue?
+      placeholder: |
+        Example: Data quality issue in PROD
+        Example: Validation rule is too strict
+        Example: Extraction didn't preserve FK relationships
+    validations:
+      required: false
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: How should this be fixed?
+      placeholder: |
+        Example: Fix data in PROD and re-migrate
+        Example: Adjust validation rule severity
+        Example: Investigate extraction logic
+    validations:
+      required: false
+
+  - type: dropdown
+    id: action_needed
+    attributes:
+      label: Action Needed
+      description: What should be done?
+      options:
+        - Rollback and re-migrate after fix
+        - Accept and proceed (warnings only)
+        - Investigate further
+        - Adjust validation rules
+        - Fix PROD data quality
+    validations:
+      required: true

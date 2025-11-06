@@ -19,6 +19,13 @@ This repository includes comprehensive documentation to help you understand, set
   - Common workflows and best practices
   - FAQ
 
+- **[GitHub Workflows Guide](docs/GITHUB-WORKFLOWS.md)** - Execute migrations from GitHub
+  - Issue-based migration requests
+  - Automated workflow execution
+  - Real-time progress monitoring
+  - Rollback procedures
+  - Security and access control
+
 - **[Setup Guide](docs/SETUP.md)** - Detailed configuration instructions
   - System requirements
   - Installation steps

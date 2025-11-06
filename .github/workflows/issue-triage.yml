@@ -1,0 +1,89 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage:
+    name: Auto-triage Issues
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Auto-label migration requests
+        if: contains(github.event.issue.title, '[MIGRATION]')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Add labels
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['migration', 'automated']
+            });
+
+            // Add comment with instructions
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `👋 Thanks for the migration request!\n\n**What happens next:**\n\n1. ✅ This issue has been auto-labeled as a migration request\n2. 🤖 GitHub Actions will trigger shortly\n3. 🚀 Claude Code will execute the migration autonomously (4-8 hours)\n4. 📊 Results will be posted here\n5. 📝 A PR with the migration report will be created\n\n**Monitoring:**\nYou can monitor progress by checking this issue. Updates will be posted every 30 minutes.\n\n**To cancel:**\nClose this issue before the workflow starts (you have ~2 minutes).\n\n**Questions?**\nSee the [User Guide](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/master/docs/USER-GUIDE.md) or [Troubleshooting Guide](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/master/docs/TROUBLESHOOTING.md).`
+            });
+
+      - name: Auto-label rollback requests
+        if: contains(github.event.issue.title, '[ROLLBACK]')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['rollback', 'urgent', 'automated']
+            });
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `⚠️ **ROLLBACK REQUEST RECEIVED**\n\nThis is a high-priority operation that will DELETE data.\n\n**What happens next:**\n\n1. ✅ This issue has been labeled as URGENT\n2. 🤖 GitHub Actions will trigger shortly\n3. ⚠️ Claude Code will execute rollback autonomously (~1 hour)\n4. 🗑️ All district data will be removed from CERT\n5. 📊 Results will be posted here\n\n**⚠️ WARNING:**\nThis operation is DESTRUCTIVE and IRREVERSIBLE.\n\n**To cancel:**\nClose this issue immediately if you made a mistake.\n\n**Questions?**\nSee [Troubleshooting - Rollback](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/master/docs/TROUBLESHOOTING.md#recovering-from-partial-rollback).`
+            });
+
+      - name: Auto-label validation issues
+        if: contains(github.event.issue.title, '[VALIDATION]')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['validation', 'data-quality']
+            });
+
+      - name: Auto-label bugs
+        if: contains(github.event.issue.title, '[BUG]')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['bug']
+            });
+
+      - name: Auto-label feature requests
+        if: contains(github.event.issue.title, '[FEATURE]')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['enhancement']
+            });
