@@ -6,6 +6,57 @@ This project **extends Claude Code** with specialized skills, subagents, and wor
 
 **Key Principle**: Build Claude Code capabilities first, then let Claude Code execute the migration autonomously.
 
+## Documentation
+
+This repository includes comprehensive documentation to help you understand, set up, and use the autonomous migration framework:
+
+### Getting Started
+
+- **[User Guide](docs/USER-GUIDE.md)** - Complete guide to using the framework
+  - Quick start instructions
+  - Step-by-step usage workflows
+  - Command reference
+  - Common workflows and best practices
+  - FAQ
+
+- **[Setup Guide](docs/SETUP.md)** - Detailed configuration instructions
+  - System requirements
+  - Installation steps
+  - Environment configuration
+  - MCP server setup
+  - Verification procedures
+
+### Understanding the Framework
+
+- **[Agent Capabilities](docs/AGENT-CAPABILITIES.md)** - Deep dive into autonomous capabilities
+  - Architecture overview
+  - Skills system explained
+  - Command system explained
+  - Agent templates explained
+  - Decision-making intelligence
+  - Extension points
+
+### Troubleshooting
+
+- **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Solutions to common issues
+  - Connection issues
+  - Extraction issues
+  - Anonymization issues
+  - Validation issues
+  - Loading issues
+  - Performance optimization
+  - Recovery procedures
+
+### Quick Links
+
+| Task | Documentation |
+|------|---------------|
+| First time setup | [Setup Guide](docs/SETUP.md) |
+| Run your first migration | [User Guide - Step-by-Step](docs/USER-GUIDE.md#step-by-step-usage) |
+| Understand how it works | [Agent Capabilities](docs/AGENT-CAPABILITIES.md) |
+| Something went wrong | [Troubleshooting Guide](docs/TROUBLESHOOTING.md) |
+| Extend the framework | [Agent Capabilities - Extension Points](docs/AGENT-CAPABILITIES.md#extension-points) |
+
 ## Problem Statement
 
 **Challenge**: Migrate PROD-like data for major districts to CERT to enable realistic testing and debugging.
